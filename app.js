@@ -12,6 +12,8 @@ function initDatabase() {
                 formData: null
             });
         }
+        localStorage.setItem('gfa_database', JSON.stringify(pins));
+        console.log("Database initialized with 1000 pins.");
     }
 }
 
