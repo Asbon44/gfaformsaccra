@@ -12,8 +12,6 @@ function initDatabase() {
                 formData: null
             });
         }
-        localStorage.setItem('gfa_database', JSON.stringify(pins));
-        console.log("Database initialized with 1000 pins.");
     }
 }
 
@@ -25,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formSection = document.getElementById('form-section');
     const successSection = document.getElementById('success-section');
     const loginError = document.getElementById('login-error');
-    
+
     const inputSerial = document.getElementById('gate-serial');
     const inputPin = document.getElementById('gate-pin');
     const adminBtn = document.getElementById('btn-generate-pins');
@@ -44,14 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
     adminBtn.addEventListener('click', () => {
         let db = JSON.parse(localStorage.getItem('gfa_database'));
         let csvContent = "Serial Number,PIN,Used Status\n";
-        
+
         db.forEach(row => {
             csvContent += `${row.serial},${row.pin},${row.used ? 'Used' : 'Unused'}\n`;
         });
-        
+
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
-        
+
         const link = document.createElement("a");
         link.setAttribute("href", url);
         link.setAttribute("download", "gfa_serial_pins.csv");
@@ -65,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Toggle Previous School Field
     Array.from(fashionBgRadios).forEach(radio => {
         radio.addEventListener('change', () => {
-            if(document.getElementById('ft-no').checked) {
+            if (document.getElementById('ft-no').checked) {
                 prevSchoolDiv.classList.remove('hidden');
                 document.querySelector('textarea[name="previous_school"]').required = true;
             } else {
@@ -79,9 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const passportUpload = document.getElementById('passport-upload');
     const previewImg = document.getElementById('preview-img');
     const previewText = document.getElementById('preview-text');
-    
+
     if (passportUpload) {
-        passportUpload.addEventListener('change', function() {
+        passportUpload.addEventListener('change', function () {
             if (this.files && this.files[0]) {
                 const url = URL.createObjectURL(this.files[0]);
                 previewImg.src = url;
@@ -99,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const serial = inputSerial.value.trim().toUpperCase();
         const pin = inputPin.value.trim();
 
-        if(!serial || !pin) {
+        if (!serial || !pin) {
             loginError.innerText = "Please enter both Serial and PIN.";
             loginError.style.display = 'block';
             return;
@@ -151,19 +149,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Check if we need to show the previous school
-            if(data['first_time'] === "No") {
+            if (data['first_time'] === "No") {
                 prevSchoolDiv.classList.remove('hidden');
             }
 
             // Handle passport visual for Read-Only
             const previewText = document.getElementById('preview-text');
-            if(previewText) {
+            if (previewText) {
                 previewText.innerText = "Submitted\nSafely";
                 previewText.style.color = "#137333";
             }
             const pUpload = document.getElementById('passport-upload');
-            if(pUpload) {
-                pUpload.type = "text"; 
+            if (pUpload) {
+                pUpload.type = "text";
                 pUpload.value = "Image stored securely.";
                 pUpload.style.border = "none";
                 pUpload.style.background = "transparent";
@@ -189,15 +187,15 @@ document.addEventListener('DOMContentLoaded', () => {
         emailBody += `Hometown: ${dataObj.hometown}\n`;
         emailBody += `Religion: ${dataObj.religion}\n`;
         emailBody += `Status: ${dataObj.residential}\n\n`;
-        
+
         emailBody += `--- SECTION B: CONTACT & BACKGROUND ---\n`;
         emailBody += `Address: ${dataObj.contact_address}\n`;
         emailBody += `Living Situation: ${dataObj.living_situation}\n`;
         emailBody += `First Time in Fashion Center?: ${dataObj.first_time}\n`;
-        if(dataObj.first_time === 'No') {
+        if (dataObj.first_time === 'No') {
             emailBody += `Previous School: ${dataObj.previous_school}\n`;
         }
-        
+
         emailBody += `\n--- SECTION C: FAMILY ---\n`;
         emailBody += `Father: ${dataObj.father_name} (${dataObj.father_phone}) - ${dataObj.father_job}\n`;
         emailBody += `Mother: ${dataObj.mother_name} (${dataObj.mother_phone}) - ${dataObj.mother_job}\n`;
@@ -212,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Mark in DB as Used
         let db = JSON.parse(localStorage.getItem('gfa_database'));
         let index = db.findIndex(r => r.serial === dataObj['current-serial']);
-        if(index > -1) {
+        if (index > -1) {
             db[index].used = true;
             db[index].formData = dataObj;
             localStorage.setItem('gfa_database', JSON.stringify(db));
@@ -221,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 4. Send background email via standard FormSubmit POST
         // (Bypasses browser security blocks for local files)
         const subject = `New Admission Application: ${dataObj.firstname} ${dataObj.surname} (${dataObj['current-serial']})`;
-        
+
         // Change button to show loading state
         const btnSubmit = document.getElementById('btn-submit');
         btnSubmit.innerText = "Redirecting to Mail Server...";
@@ -231,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const mailForm = document.createElement("form");
         mailForm.method = "POST";
         mailForm.action = "https://formsubmit.co/generalfashionacademyaccra@gmail.com";
-        mailForm.enctype = "multipart/form-data"; 
+        mailForm.enctype = "multipart/form-data";
 
         // Attach Passport Photo File Input to the mailForm
         const passportInput = document.getElementById('passport-upload');
