@@ -11,8 +11,15 @@ const firebaseConfig = {
   measurementId: "G-NKMSHHEMN8"
 };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// Wrap Firebase init so a missing CDN or duplicate app error doesn't crash the script
+try {
+    firebase.initializeApp(firebaseConfig);
+} catch (e) {
+    console.warn("Firebase init skipped:", e.message);
+}
+const db = (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length)
+    ? firebase.firestore()
+    : null;
 // Initialize Pins in LocalStorage
 function initDatabase() {
     if (!localStorage.getItem('gfa_database_v2')) {
@@ -77,7 +84,7 @@ initDatabase();
         });
     }
 
-    // Handle Login (Cloud Optimized)
+    // Handle Login (Firebase-first with localStorage fallback)
     loginBtn.addEventListener('click', async () => {
         const serial = inputSerial.value.trim().toUpperCase();
         const pin = inputPin.value.trim();
@@ -92,35 +99,51 @@ initDatabase();
         loginBtn.disabled = true;
 
         try {
-            // 1. Check Cloud Firestore First (for "Another Phone" access)
-            const docRef = doc(db, "applications", serial);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                const cloudRecord = docSnap.data();
-                if (cloudRecord.pin === pin) {
-                    loginError.style.display = 'none';
-                    openForm(cloudRecord);
-                    return;
+            // --- STEP 1: Check Firestore (cross-device used-lock) ---
+            if (db) {
+                try {
+                    const cloudSnap = await db.collection('applications').doc(serial).get();
+                    if (cloudSnap.exists) {
+                        const cloudData = cloudSnap.data();
+                        // Verify PIN matches
+                        if (cloudData.pin !== pin) {
+                            loginError.innerText = "Invalid Serial Number or PIN.";
+                            loginError.style.display = 'block';
+                            return;
+                        }
+                        // If used=true, open in read-only view mode (no resubmit allowed)
+                        // If used=false, open normally
+                        loginError.style.display = 'none';
+                        openForm(cloudData);
+                        return;
+                    }
+                } catch (cloudErr) {
+                    console.warn("Firestore check failed, using local fallback:", cloudErr.message);
                 }
             }
 
-            // 2. Fallback to Local Pin List (for First-Time use)
+            // --- STEP 2: Fallback — check localStorage ---
             let localRaw = localStorage.getItem('gfa_database_v2');
-            if (!localRaw || localRaw === '[]' || localRaw === 'true') {
+            let localDb = null;
+            try { localDb = JSON.parse(localRaw); } catch(e) { localDb = null; }
+
+            if (!Array.isArray(localDb) || localDb.length === 0) {
+                localStorage.removeItem('gfa_database_v2');
                 initDatabase();
                 localRaw = localStorage.getItem('gfa_database_v2');
+                try { localDb = JSON.parse(localRaw); } catch(e) { localDb = null; }
             }
-            
-            let localDb = JSON.parse(localRaw);
-            if (!localDb || !Array.isArray(localDb)) {
-                throw new Error("Local database is corrupted or missing.");
+
+            if (!Array.isArray(localDb) || localDb.length === 0) {
+                loginError.innerText = "Database error. Please refresh the page and try again.";
+                loginError.style.display = 'block';
+                return;
             }
 
             let localRecord = localDb.find(r => r.serial === serial && r.pin === pin);
 
-
             if (localRecord) {
+                // Open form — if used=true, openForm() will show it in read-only mode
                 loginError.style.display = 'none';
                 openForm(localRecord);
             } else {
@@ -128,14 +151,15 @@ initDatabase();
                 loginError.style.display = 'block';
             }
         } catch (error) {
-            console.error("Cloud Error:", error);
-            loginError.innerText = "Error connecting to cloud. Please check your internet.";
+            console.error("Login Error:", error);
+            loginError.innerText = "An error occurred. Please refresh and try again.";
             loginError.style.display = 'block';
         } finally {
             loginBtn.innerText = "Access Form";
             loginBtn.disabled = false;
         }
     });
+
 
     // Open Form State (New or Read-Only)
     function openForm(record) {
@@ -225,18 +249,21 @@ initDatabase();
         btnSubmit.disabled = true;
 
         try {
-            // 2. Mark in Cloud Firestore (Global Lock & Cross-Device Access)
-            const docRef = doc(db, "applications", serial);
-            await setDoc(docRef, {
-                serial: serial,
-                pin: dataObj['gate-pin'] || document.getElementById('hidden-pin').value,
-                used: true,
-                formData: dataObj,
-                submittedAt: new Date().toISOString()
-            });
+            // 2. Save to Cloud Firestore (cross-device used-lock)
+            if (db) {
+                const pin = document.getElementById('hidden-pin').value;
+                await db.collection('applications').doc(serial).set({
+                    serial: serial,
+                    pin: pin,
+                    used: true,
+                    formData: dataObj,
+                    submittedAt: new Date().toISOString()
+                });
+                console.log("Saved to Firestore successfully.");
+            }
 
-            // 3. Mark in Local DB (Device Cache)
-            let localDb = JSON.parse(localStorage.getItem('gfa_database_v2'));
+            // 3. Mark in Local DB (device cache)
+            let localDb = JSON.parse(localStorage.getItem('gfa_database_v2') || '[]');
             let index = localDb.findIndex(r => r.serial === serial);
             if (index > -1) {
                 localDb[index].used = true;
@@ -245,7 +272,7 @@ initDatabase();
             }
         } catch (error) {
             console.error("Cloud Save Error:", error);
-            // We continue to email even if cloud save fails locally, but we warn the console
+            // Still continue to send email even if cloud save fails
         }
 
         // 2. Formatting Email
