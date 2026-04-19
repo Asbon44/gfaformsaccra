@@ -35,8 +35,6 @@
             <div class="error-msg" id="login-error">Invalid Serial Number or PIN. Please try again.</div>
 
             <button class="btn" id="btn-login" style="margin-top: 15px;">Access Form</button>
-            <div> <button class="admin-btn" id="btn-generate-pins"> </button>
-            </div>
 
         </div>
 
@@ -49,8 +47,9 @@
             </div>
 
             <form id="admission-form">
-                <!-- Hidden field for serial used during submission -->
-                <input type="hidden" id="current-serial" name="current-serial">
+                <!-- Hidden values for submission -->
+                <input type="hidden" name="current-serial" id="current-serial">
+                <input type="hidden" name="gate-pin" id="hidden-pin">
 
                 <!-- Section A -->
                 <div class="form-section">
@@ -269,7 +268,7 @@
                             </div>
                         </div>
                         <div>
-                            <label>NHIS Card Status</label>
+                            <label>Is Your NHIS Card Active</label>
                             <div class="radio-group" id="nhis-group">
                                 <div class="radio-item">
                                     <input type="radio" name="nhis" value="Yes" id="nhis-yes" required>
@@ -292,7 +291,7 @@
                 <!-- Final Agreement -->
                 <div class="form-section">
                     <h2>Agreements & Policies</h2>
-                    <p style="font-size: 13px; color: #ccc; margin-bottom: 15px; line-height:1.5;">
+                    <p style="font-size: 13px; color: #4d4c4c; margin-bottom: 15px; line-height:1.5;">
                         By checking the box below, you agree to the General Fashion Academy's policies including:<br>
                         <strong>Punctuality:</strong> Must avoid lateness.<br>
                         <strong>Uniform:</strong> Prescribed uniform must be worn at all times on campus.<br>
@@ -300,6 +299,8 @@
                         days.<br>
                         <strong>Withdrawal:</strong> 30 business days' written notice is required to withdraw.
                     </p>
+                    <strong>NOTE: </strong> School resumes on <br>1st 18th June 2026<br><br>2nd Batch 20th July
+                    2026<br><br>3rd Batch 18th August 2026<br><br>Late admission 12th January 2027<br>
                     <div class="checkbox-group" id="agreement-container">
                         <div class="checkbox-item">
                             <input type="checkbox" id="agreement" name="agreement" required>
@@ -332,6 +333,9 @@
         </div>
     </div>
 
+    <!-- Firebase Compat SDKs (work with local file:// without CORS issues) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script src="app.js"></script>
 </body>
 
